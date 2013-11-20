@@ -22,8 +22,8 @@
 ###########################################################################
 #  Choose your libidn version and your currently-installed iOS SDK version:
 #
-VERSION="1.25"
-SDKVERSION="6.0"
+VERSION="1.28"
+SDKVERSION="7.0"
 #
 #
 ###########################################################################
@@ -34,7 +34,7 @@ SDKVERSION="6.0"
 
 # No need to change this since xcode build will only compile in the
 # necessary bits from the libraries we create
-ARCHS="i386 armv7 armv7s"
+ARCHS="i386 x86_64 armv7 armv7s arm64"
 
 DEVELOPER=`xcode-select -print-path`
 
@@ -88,32 +88,32 @@ set -e # back to regular "bail out on error" mode
 
 for ARCH in ${ARCHS}
 do
-	if [ "${ARCH}" == "i386" ];
-	then
-		PLATFORM="iPhoneSimulator"
-        EXTRA_CONFIG=""
-        EXTRA_CFLAGS=""
-	else
-		PLATFORM="iPhoneOS"
-        EXTRA_CONFIG="--host=arm-apple-darwin10 --disable-asm"
-        EXTRA_CFLAGS="-DNO_ASM"
-	fi
+    if [ "${ARCH}" == "i386" ] || [ "${ARCH}" == "x86_64" ] ; then
+        PLATFORM="iPhoneSimulator"
+        EXTRA_CONFIG="--host ${ARCH}-apple-darwin"
+        EXTRA_CFLAGS="-g -arch ${ARCH} -fPIE -miphoneos-version-min=6.0"
+        EXTRA_LDFLAGS="-arch ${ARCH} -fPIE -miphoneos-version-min=6.0"
+    else
+        PLATFORM="iPhoneOS"
+        EXTRA_CONFIG="--host arm-apple-darwin"
+        EXTRA_CFLAGS="-g -arch ${ARCH} -fPIE -miphoneos-version-min=6.0"
+        EXTRA_LDFLAGS="-arch ${ARCH} -fPIE -miphoneos-version-min=6.0"
+    fi
 
-	mkdir -p "${INTERDIR}/${PLATFORM}${SDKVERSION}-${ARCH}.sdk"
+    mkdir -p "${INTERDIR}/${PLATFORM}${SDKVERSION}-${ARCH}.sdk"
 
-	./configure --disable-shared --enable-static ${EXTRA_CONFIG} \
+    ./configure --disable-shared --enable-static --with-pic --with-libgcrypt-prefix=${OUTPUTDIR} ${EXTRA_CONFIG} \
     --prefix="${INTERDIR}/${PLATFORM}${SDKVERSION}-${ARCH}.sdk" \
-    CC="${CCACHE}${DEVELOPER}/Platforms/${PLATFORM}.platform/Developer/usr/bin/gcc -arch ${ARCH}" \
-    LDFLAGS="$LDFLAGS -L${OUTPUTDIR}/lib" \
+    CC="${CCACHE}${DEVELOPER}/usr/bin/gcc" \
+    LDFLAGS="$LDFLAGS ${EXTRA_LDFLAGS} -L${OUTPUTDIR}/lib" \
     CFLAGS="$CFLAGS ${EXTRA_CFLAGS} -I${OUTPUTDIR}/include -isysroot ${DEVELOPER}/Platforms/${PLATFORM}.platform/Developer/SDKs/${PLATFORM}${SDKVERSION}.sdk" \
-    CPPFLAGS="$CPPFLAGS -I${OUTPUTDIR}/include -isysroot ${DEVELOPER}/Platforms/${PLATFORM}.platform/Developer/SDKs/${PLATFORM}${SDKVERSION}.sdk"
 
     # Build the application and install it to the fake SDK intermediary dir
     # we have set up. Make sure to clean up afterward because we will re-use
     # this source tree to cross-compile other targets.
-	make -j2
-	make install
-	make clean
+    make -j2
+    make install
+    make clean
 done
 
 ########################################
