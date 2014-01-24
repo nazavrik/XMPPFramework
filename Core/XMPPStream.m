@@ -172,6 +172,7 @@ enum XMPPStreamConfig
 @implementation XMPPStream
 
 @synthesize tag = userTag;
+@synthesize socket = asyncSocket;
 
 /**
  * Shared initialization between the various init methods.
@@ -212,6 +213,10 @@ enum XMPPStreamConfig
 	receipts = [[NSMutableArray alloc] init];
 }
 
+- (Class) asyncSocketClass {
+    return [GCDAsyncSocket class];
+}
+
 /**
  * Standard XMPP initialization.
  * The stream is a standard client to server connection.
@@ -224,7 +229,7 @@ enum XMPPStreamConfig
 		[self commonInit];
 		
 		// Initialize socket
-		asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+		asyncSocket = [[[self asyncSocketClass] alloc] initWithDelegate:self delegateQueue:xmppQueue];
 	}
 	return self;
 }
